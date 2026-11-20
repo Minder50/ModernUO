@@ -17,7 +17,7 @@ public class Sigil : BaseSystemController
     public static readonly TimeSpan CorruptionPeriod = Core.SE ? TimeSpan.FromMinutes(5.0) : TimeSpan.FromMinutes(10.0);
 
     // After a sigil has been corrupted it must be returned to the town within this period of time
-    public static readonly TimeSpan ReturnPeriod = TimeSpan.FromHours(1.0);
+    public static readonly TimeSpan ReturnPeriod = TimeSpan.FromHours(3.0);
 
     // Once it's been returned the corrupting faction owns the town for this period of time
     public static readonly TimeSpan PurificationPeriod = TimeSpan.FromMinutes(5.0);
