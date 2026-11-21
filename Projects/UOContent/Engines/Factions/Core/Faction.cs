@@ -986,6 +986,8 @@ public abstract class Faction : IComparable<Faction>, ISpanParsable<Faction>
                 sigil.CorruptionStart + Sigil.CorruptionPeriod < Core.Now)
             {
                 sigil.Corrupted = sigil.Corrupting;
+                sigil.Corrupting = null;
+                sigil.CorruptionStart = DateTime.MinValue;
             }
             else if (sigil.IsPurifying &&
                      sigil.PurificationStart + Sigil.PurificationPeriod < Core.Now)

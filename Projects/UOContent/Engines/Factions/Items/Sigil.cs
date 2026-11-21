@@ -236,38 +236,58 @@ public class Sigil : BaseSystemController
 
     public override void OnDoubleClick(Mobile from)
     {
-    // Si el sigil está colocado en un StrongholdMonolith
-    if (LastMonolith is StrongholdMonolith sm)
-    {
-        if (sm.Faction == null)
+        // Si está en la mochila, permite apuntar a un monolito (incluyendo TownMonolith) o jugador
+        if (IsChildOf(from.Backpack))
         {
-            from.SendMessage("El monolito no tiene facción asignada.");
+            if (LastMonolith is StrongholdMonolith)
+            {
+                LastMonolith = null;
+            }
+
+            from.BeginTarget(1, false, TargetFlags.None, Sigil_OnTarget);
+            from.SendLocalizedMessage(1042251); // Click on a sigil monolith or player
             return;
         }
 
-        if (Corrupting == null)
+        // Si el sigil está colocado en un StrongholdMonolith
+        if (LastMonolith is StrongholdMonolith sm)
         {
-            BeginCorrupting(sm.Faction);
+            if (sm.Faction == null)
+            {
+                from.SendMessage("El monolito no tiene facción asignada.");
+                return;
+            }
 
-            Update();
+            if (sm.Town == null || sm.Town != m_Town)
+            {
+                from.SendMessage("Este no es el monolito correspondiente a esta ciudad.");
+                return;
+            }
 
-            from.SendMessage("La corrupción del sigil ha comenzado.");
+            if (Corrupted == sm.Faction)
+            {
+                if (Corrupting != null || CorruptionStart != DateTime.MinValue)
+                {
+                    ClearCorrupting();
+                    Update();
+                }
+
+                from.SendMessage("Este sigil ya está corrompido por esta facción.");
+                return;
+            }
+
+            if (Corrupting == null)
+            {
+                BeginCorrupting(sm.Faction);
+                Update();
+                from.SendMessage("La corrupción del sigil ha comenzado.");
+            }
+            else
+            {
+                from.SendMessage("Este sigil ya está siendo corrompido.");
+            }
         }
-        else
-        {
-            from.SendMessage("Este sigil ya está siendo corrompido.");
-        }
-
-        return;
     }
-
-    // Código original
-    if (IsChildOf(from.Backpack))
-    {
-        from.BeginTarget(1, false, TargetFlags.None, Sigil_OnTarget);
-        from.SendLocalizedMessage(1042251); // Click on a sigil monolith or player
-    }
-}
     public static bool ExistsOn(Mobile mob) => mob.Backpack?.FindItemByType<Sigil>() != null;
 
     private void BeginCorrupting(Faction faction)
@@ -406,7 +426,6 @@ public class Sigil : BaseSystemController
 
         Update();
     }
-
     public override void Serialize(IGenericWriter writer)
     {
         base.Serialize(writer);
