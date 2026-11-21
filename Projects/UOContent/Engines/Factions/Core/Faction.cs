@@ -953,7 +953,8 @@ public abstract class Faction : IComparable<Faction>, ISpanParsable<Faction>
         {
             var sigil = sigils[i];
 
-            if (!sigil.IsBeingCorrupted && sigil.GraceStart != DateTime.MinValue &&
+            if (!sigil.IsBeingCorrupted &&
+                sigil.GraceStart != DateTime.MinValue &&
                 sigil.GraceStart + Sigil.CorruptionGrace < Core.Now)
             {
                 if (sigil.LastMonolith is StrongholdMonolith &&
@@ -981,21 +982,18 @@ public abstract class Faction : IComparable<Faction>, ISpanParsable<Faction>
                 continue;
             }
 
-            if (sigil.IsBeingCorrupted && sigil.CorruptionStart + Sigil.CorruptionPeriod < Core.Now)
+            if (sigil.IsBeingCorrupted &&
+                sigil.CorruptionStart + Sigil.CorruptionPeriod < Core.Now)
             {
                 sigil.Corrupted = sigil.Corrupting;
             }
-            else if (sigil.IsPurifying && sigil.PurificationStart + Sigil.PurificationPeriod < Core.Now)
+            else if (sigil.IsPurifying &&
+                     sigil.PurificationStart + Sigil.PurificationPeriod < Core.Now)
             {
                 sigil.PurificationStart = DateTime.MinValue;
             }
-
-            sigil.Corrupting = null;
-            sigil.CorruptionStart = DateTime.MinValue;
-            sigil.GraceStart = DateTime.MinValue;
         }
     }
-
     public static void HandleDeath(Mobile mob)
     {
         HandleDeath(mob, null);
