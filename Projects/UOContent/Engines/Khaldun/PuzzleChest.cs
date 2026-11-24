@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using ModernUO.Serialization;
 using Server.Collections;
 using Server.Gumps;
+using Server.Mobiles;
 using Server.Network;
+using Server.Commands;
+using Server.Targeting;
 
 namespace Server.Items
 {
@@ -31,11 +34,8 @@ namespace Server.Items
 
         public const int Length = 5;
 
-        // Declared first: the generator picks the first matching constructor, and a deserialized
-        // solution must know its chest to mark it dirty.
         public PuzzleChestSolution(PuzzleChest chest) : this() => _chest = chest;
 
-        // Transient solutions (player guesses being edited in a gump) have no owning chest.
         public PuzzleChestSolution() =>
             _cylinders = [RandomCylinder(), RandomCylinder(), RandomCylinder(), RandomCylinder(), RandomCylinder()];
 
@@ -145,7 +145,6 @@ namespace Server.Items
                 if (Cylinders[i] == solution.Cylinders[i])
                 {
                     cylinders++;
-
                     matchesSrc[i] = true;
                     matchesDst[i] = true;
                 }
@@ -163,7 +162,6 @@ namespace Server.Items
                     if (Cylinders[i] == solution.Cylinders[j] && !matchesDst[j])
                     {
                         colors++;
-
                         matchesDst[j] = true;
                     }
                 }
@@ -188,7 +186,6 @@ namespace Server.Items
         public PuzzleChestSolutionAndTime(PuzzleChest chest, DateTime when, PuzzleChestSolution solution)
             : base(chest, solution) => _when = when;
 
-        // The generator deserializes guesses through this constructor so each one knows its chest.
         public PuzzleChestSolutionAndTime(PuzzleChest chest) : base(chest)
         {
         }
@@ -197,8 +194,88 @@ namespace Server.Items
     [SerializationGenerator(1)]
     public abstract partial class PuzzleChest : BaseTreasureChest
     {
+        [Usage("SetPuzzleCount <cantidad>")]
+        [Description("Establece el contador actual de cofres resueltos para pruebas.")]
+        private static void SetPuzzleCount_OnCommand(CommandEventArgs e)
+        {
+            if (e.Length < 1 || !int.TryParse(e.GetString(0), out var count) || count < 0)
+            {
+                e.Mobile.SendMessage($"Contador actual: {_solvedChestCount}/{HarrowerAndGateAtSixChests}. Uso: [SetPuzzleCount <numero>");
+                return;
+            }
+
+            _solvedChestCount = count;
+            e.Mobile.SendMessage($"Contador de cofres resueltos ajustado a {_solvedChestCount}/{HarrowerAndGateAtSixChests}.");
+        }
+
+        private static void OnWorldLoad()
+        {
+            _solvedChestCount = 0;
+            CloseFifthChestGates();
+
+            foreach (var item in World.Items.Values)
+            {
+                if (item is Moongate gate &&
+                    !gate.Deleted &&
+                    !gate.Movable &&
+                    gate.Hue == 0x482 &&
+                    gate.Target == FifthChestGateDest &&
+                    gate.TargetMap == Map.Felucca)
+                {
+                    gate.Delete();
+                }
+            }
+
+            ResetAllPuzzleChests();
+        }
+
+        public static void Configure()
+        {
+            EventSink.WorldLoad += OnWorldLoad;
+            CommandSystem.Register("ResetPuzzle", AccessLevel.GameMaster, ResetPuzzle_OnCommand);
+            CommandSystem.Register("SetPuzzleCount", AccessLevel.GameMaster, SetPuzzleCount_OnCommand);
+        }
+
+        [Usage("ResetPuzzle")]
+        [Description("Resetea el puzle de un PuzzleChest seleccionado.")]
+        private static void ResetPuzzle_OnCommand(CommandEventArgs e)
+        {
+            e.Mobile.SendMessage("Selecciona el cofre de puzle que quieres resetear.");
+            e.Mobile.Target = new ResetPuzzleTarget();
+        }
+
+        private class ResetPuzzleTarget : Target
+        {
+            public ResetPuzzleTarget() : base(12, false, TargetFlags.None)
+            {
+            }
+
+            protected override void OnTarget(Mobile from, object targeted)
+            {
+                if (targeted is PuzzleChest chest && !chest.Deleted)
+                {
+                    chest.ResetPuzzle();
+                    from.SendMessage("El puzle del cofre ha sido reseteado.");
+                }
+                else
+                {
+                    from.SendMessage("Debes seleccionar un cofre de puzle válido.");
+                }
+            }
+        }
         public const int HintsCount = 3;
+        public const int PortalAtFiveChests = 5;
+        public const int HarrowerAndGateAtSixChests = 6;
         public static readonly TimeSpan CleanupTime = TimeSpan.FromHours(1.0);
+        public static readonly TimeSpan GateDuration = TimeSpan.FromMinutes(5.0);
+
+        private static readonly Point3D FifthChestGateDest = new(5451, 1374, 0);
+        private static readonly Point3D SixthChestPlayerGateDest = new(7078, 727, 25);
+        private static readonly Point3D HarrowerSpawnPos = new(6995, 733, 51);
+
+        private static readonly List<PuzzleChest> _activeChests = [];
+        private static readonly List<Moongate> _fifthChestGates = [];
+        private static int _solvedChestCount;
 
         private TimerExecutionToken _cleanupTimerToken;
 
@@ -210,17 +287,42 @@ namespace Server.Items
         [SerializableField(2)]
         private Dictionary<Mobile, PuzzleChestSolutionAndTime> _guesses;
 
-        public PuzzleChest(int itemID) : base(itemID) => _hints = new PuzzleChestCylinder[HintsCount];
+        public PuzzleChest(int itemID) : base(itemID)
+        {
+            _hints = new PuzzleChestCylinder[HintsCount];
+            EnsureSolution();
+            TrackChest(this);
+        }
+
+        private static void TrackChest(PuzzleChest chest)
+        {
+            if (chest != null && !chest.Deleted && !_activeChests.Contains(chest))
+            {
+                _activeChests.Add(chest);
+            }
+        }
+
+        public void EnsureSolution()
+        {
+            if (Solution == null || Solution.Cylinders.Length != PuzzleChestSolution.Length ||
+                Array.Exists(Solution.Cylinders, c => c == 0 || c == PuzzleChestCylinder.None))
+            {
+                Solution = new PuzzleChestSolution(this);
+                return;
+            }
+
+            if (_hints == null || _hints.Length != HintsCount ||
+                Array.Exists(_hints, c => c == 0 || c == PuzzleChestCylinder.None))
+            {
+                InitHints();
+            }
+        }
 
         [AfterDeserialization]
         private void AfterDeserialization()
         {
-            // Validate hints array length - regenerate if mismatched
-            if (_hints.Length != HintsCount)
-            {
-                InitHints();
-            }
-
+            TrackChest(this);
+            EnsureSolution();
             StartCleanupTimer();
         }
 
@@ -230,11 +332,12 @@ namespace Server.Items
             _solution.Deserialize(reader);
 
             var length = reader.ReadEncodedInt();
+            _hints = new PuzzleChestCylinder[HintsCount];
             for (var i = 0; i < length; i++)
             {
                 var cylinder = (PuzzleChestCylinder)reader.ReadInt();
 
-                if (length == _hints.Length)
+                if (i < HintsCount)
                 {
                     _hints[i] = cylinder;
                 }
@@ -250,7 +353,12 @@ namespace Server.Items
             for (var i = 0; i < guessCount; i++)
             {
                 var m = reader.ReadEntity<Mobile>();
-                (_guesses[m] = new PuzzleChestSolutionAndTime(this)).Deserialize(reader);
+                var guess = new PuzzleChestSolutionAndTime(this);
+                guess.Deserialize(reader);
+                if (m != null)
+                {
+                    _guesses[m] = guess;
+                }
             }
         }
 
@@ -259,31 +367,52 @@ namespace Server.Items
 
         private void OnSolutionChanged(PuzzleChestSolution oldValue, PuzzleChestSolution newValue)
         {
-            InitHints();
+            if (newValue != null)
+            {
+                InitHints();
+            }
         }
 
         public PuzzleChestCylinder FirstHint
         {
-            get => _hints[0];
-            set => _hints[0] = value;
+            get => _hints != null && _hints.Length > 0 ? _hints[0] : PuzzleChestCylinder.None;
+            set
+            {
+                _hints ??= new PuzzleChestCylinder[HintsCount];
+                _hints[0] = value;
+            }
         }
 
         public PuzzleChestCylinder SecondHint
         {
-            get => _hints[1];
-            set => _hints[1] = value;
+            get => _hints != null && _hints.Length > 1 ? _hints[1] : PuzzleChestCylinder.None;
+            set
+            {
+                _hints ??= new PuzzleChestCylinder[HintsCount];
+                _hints[1] = value;
+            }
         }
 
         public PuzzleChestCylinder ThirdHint
         {
-            get => _hints[2];
-            set => _hints[2] = value;
+            get => _hints != null && _hints.Length > 2 ? _hints[2] : PuzzleChestCylinder.None;
+            set
+            {
+                _hints ??= new PuzzleChestCylinder[HintsCount];
+                _hints[2] = value;
+            }
         }
 
         public override string DefaultName => null;
 
         private void InitHints()
         {
+            if (Solution == null || Solution.Cylinders.Length <= 1)
+            {
+                _hints = new PuzzleChestCylinder[HintsCount];
+                return;
+            }
+
             Span<PuzzleChestCylinder> cylinders = stackalloc PuzzleChestCylinder[Solution.Cylinders.Length - 1];
             Solution.Cylinders.AsSpan(1).CopyTo(cylinders);
 
@@ -294,50 +423,61 @@ namespace Server.Items
         public override void OnDelete()
         {
             StopCleanupTimer();
+            _activeChests.Remove(this);
             base.OnDelete();
         }
 
         protected override void SetLockLevel()
         {
-            LockLevel = ILockpickable.CannotPick; // Can't be unlocked
+            LockLevel = ILockpickable.CannotPick;
         }
 
         public override bool CheckLocked(Mobile from)
         {
+            if (from == null || from.Deleted)
+            {
+                return true;
+            }
+
             if (Locked)
             {
-                PuzzleChestSolution solution = GetLastGuess(from);
-                if (solution != null)
-                {
-                    solution = new PuzzleChestSolution(solution);
-                }
-                else
-                {
-                    solution = new PuzzleChestSolution(
+                EnsureSolution();
+
+                var last = GetLastGuess(from);
+                var workingSolution = last != null
+                    ? new PuzzleChestSolution(last)
+                    : new PuzzleChestSolution(
                         PuzzleChestCylinder.None,
                         PuzzleChestCylinder.None,
                         PuzzleChestCylinder.None,
                         PuzzleChestCylinder.None,
                         PuzzleChestCylinder.None
                     );
-                }
 
-                from.SendGump(new PuzzleGump(from, this, solution));
+                from.CloseGump<PuzzleGump>();
+                from.SendGump(new PuzzleGump(from, this, workingSolution, 0));
                 return true;
             }
 
             return false;
         }
 
-        public PuzzleChestSolutionAndTime GetLastGuess(Mobile m) => _guesses?.GetValueOrDefault(m);
+        public PuzzleChestSolutionAndTime GetLastGuess(Mobile m) => m != null ? _guesses?.GetValueOrDefault(m) : null;
 
         public void SubmitSolution(Mobile m, PuzzleChestSolution solution)
         {
+            if (m == null || m.Deleted || solution == null)
+            {
+                return;
+            }
+
+            EnsureSolution();
+
             if (solution.Matches(Solution, out var correctCylinders, out var correctColors))
             {
                 LockPick(m);
-
                 DisplayTo(m);
+                RegisterSolvedChest(this, m);
             }
             else
             {
@@ -345,53 +485,170 @@ namespace Server.Items
                 StartCleanupTimer();
 
                 m.SendGump(new StatusGump(correctCylinders, correctColors));
-
                 DoDamage(m);
             }
         }
 
+        private static void CloseFifthChestGates()
+        {
+            for (var i = _fifthChestGates.Count - 1; i >= 0; i--)
+            {
+                var gate = _fifthChestGates[i];
+                if (gate != null && !gate.Deleted)
+                {
+                    gate.Delete();
+                }
+            }
+
+            _fifthChestGates.Clear();
+        }
+
+        public void ResetPuzzle()
+        {
+            if (Deleted)
+            {
+                return;
+            }
+
+            StopCleanupTimer();
+            _guesses = null;
+            Locked = true;
+            SetLockLevel();
+            Solution = new PuzzleChestSolution(this);
+            InitHints();
+        }
+
+        private static void ResetAllPuzzleChests()
+        {
+            for (var i = _activeChests.Count - 1; i >= 0; i--)
+            {
+                var chest = _activeChests[i];
+                if (chest == null || chest.Deleted)
+                {
+                    _activeChests.RemoveAt(i);
+                    continue;
+                }
+
+                chest.ResetPuzzle();
+            }
+        }
+
+        private static void RegisterSolvedChest(PuzzleChest chest, Mobile solver)
+        {
+            if (chest == null || solver == null || solver.Deleted)
+            {
+                return;
+            }
+
+            _solvedChestCount++;
+
+            if (_solvedChestCount == PortalAtFiveChests)
+            {
+                SpawnFifthChestGateAtPlayer(
+                    solver,
+                    FifthChestGateDest,
+                    Map.Felucca,
+                    0x482,
+                    "¡5.º cofre resuelto! Se ha abierto un portal a tus pies hacia (5451, 1374)."
+                );
+            }
+            else if (_solvedChestCount >= HarrowerAndGateAtSixChests)
+            {
+                _solvedChestCount = 0;
+                CloseFifthChestGates();
+                ResetAllPuzzleChests();
+
+                var playerMap = solver.Map;
+                if (playerMap == null || playerMap == Map.Internal)
+                {
+                    return;
+                }
+
+                var destMap = Map.Felucca;
+                var skullGate = new HarrowerSkullGate
+                {
+                    GateDuration = GateDuration
+                };
+                skullGate.MoveToWorld(solver.Location, playerMap);
+                skullGate.ActivateFromPuzzleChest(
+                    solver,
+                    SixthChestPlayerGateDest,
+                    destMap,
+                    HarrowerSpawnPos,
+                    GateDuration
+                );
+
+                solver.SendMessage(
+                    "¡6.º cofre resuelto! Se ha generado el altar en tu posición (dura 5 minutos) hacia la Mazmorra y Harrower ha sido invocado en la Mazmorra."
+                );
+            }
+            else
+            {
+                solver.SendMessage($"Cofres de puzle resueltos: {_solvedChestCount}/{HarrowerAndGateAtSixChests}.");
+            }
+        }
+
+        private static void SpawnFifthChestGateAtPlayer(
+            Mobile player, Point3D destLocation, Map destMap, int hue, string message
+        )
+        {
+            var map = player.Map;
+            if (map == null || map == Map.Internal || destMap == null || destMap == Map.Internal)
+            {
+                return;
+            }
+
+            var gate = new Moongate(destLocation, destMap)
+            {
+                Movable = false,
+                Hue = hue
+            };
+
+            gate.MoveToWorld(player.Location, map);
+            _fifthChestGates.Add(gate);
+
+            Effects.SendLocationEffect(player.Location, map, 0x3728, 10, 10);
+            Effects.PlaySound(player.Location, map, 0x1FE);
+            player.SendMessage(message);
+        }
+
         public static void DoDamage(Mobile to)
         {
+            if (to == null || to.Deleted)
+            {
+                return;
+            }
+
             switch (Utility.Random(4))
             {
                 case 0:
                     {
                         Effects.SendLocationEffect(to, 0x113A, 20);
                         to.PlaySound(0x231);
-                        to.LocalOverheadMessage(MessageType.Regular, 0x44, 1010523); // A toxic vapor envelops thee.
-
+                        to.LocalOverheadMessage(MessageType.Regular, 0x44, 1010523);
                         to.ApplyPoison(to, Poison.Regular);
-
                         break;
                     }
                 case 1:
                     {
                         Effects.SendLocationEffect(to, 0x3709, 30);
                         to.PlaySound(0x54);
-                        to.LocalOverheadMessage(MessageType.Regular, 0xEE, 1010524); // Searing heat scorches thy skin.
-
+                        to.LocalOverheadMessage(MessageType.Regular, 0xEE, 1010524);
                         AOS.Damage(to, to, Utility.RandomMinMax(10, 40), 0, 100, 0, 0, 0);
-
                         break;
                     }
                 case 2:
                     {
                         to.PlaySound(0x223);
-                        // Pain lances through thee from a sharp metal blade.
                         to.LocalOverheadMessage(MessageType.Regular, 0x62, 1010525);
-
                         AOS.Damage(to, to, Utility.RandomMinMax(10, 40), 100, 0, 0, 0, 0);
-
                         break;
                     }
                 default:
                     {
                         to.BoltEffect(0);
-                        // Lightning arcs through thy body.
                         to.LocalOverheadMessage(MessageType.Regular, 0xDA, 1010526);
-
                         AOS.Damage(to, to, Utility.RandomMinMax(10, 40), 0, 0, 0, 0, 100);
-
                         break;
                     }
             }
@@ -470,8 +727,7 @@ namespace Server.Items
 
             for (var i = 0; i < gems.Count; i++)
             {
-                var gem = gems[i];
-                DropItem(gem);
+                DropItem(gems[i]);
             }
 
             if (Utility.RandomDouble() < 0.2)
@@ -488,7 +744,6 @@ namespace Server.Items
                     if (Core.AOS)
                     {
                         GetRandomAOSStats(out var attributeCount, out var min, out var max);
-
                         BaseRunicTool.ApplyAttributesTo(weapon, attributeCount, min, max);
                     }
                     else
@@ -505,7 +760,6 @@ namespace Server.Items
                     if (Core.AOS)
                     {
                         GetRandomAOSStats(out var attributeCount, out var min, out var max);
-
                         BaseRunicTool.ApplyAttributesTo(armor, attributeCount, min, max);
                     }
                     else
@@ -521,7 +775,6 @@ namespace Server.Items
                     if (Core.AOS)
                     {
                         GetRandomAOSStats(out var attributeCount, out var min, out var max);
-
                         BaseRunicTool.ApplyAttributesTo(hat, attributeCount, min, max);
                     }
 
@@ -530,9 +783,7 @@ namespace Server.Items
                 else if (item is BaseJewel jewel)
                 {
                     GetRandomAOSStats(out var attributeCount, out var min, out var max);
-
                     BaseRunicTool.ApplyAttributesTo(jewel, attributeCount, min, max);
-
                     DropItem(jewel);
                 }
             }
@@ -580,7 +831,7 @@ namespace Server.Items
 
         private class PuzzleGump : DynamicGump
         {
-            private int _check;
+            private readonly int _check;
             private readonly PuzzleChest _chest;
             private readonly PuzzleChestSolution _solution;
             private readonly double _lockpicking;
@@ -588,28 +839,26 @@ namespace Server.Items
 
             public override bool Singleton => true;
 
-            public PuzzleGump(Mobile from, PuzzleChest chest, PuzzleChestSolution solution) : base(50, 50)
+            public PuzzleGump(Mobile from, PuzzleChest chest, PuzzleChestSolution solution, int check = 0) : base(50, 50)
             {
                 _chest = chest;
                 _solution = solution;
+                _check = check;
                 _lockpicking = from.Skills.Lockpicking.Base;
                 _lastGuess = chest.GetLastGuess(from);
             }
 
             protected override void BuildLayout(ref DynamicGumpBuilder builder)
             {
+                _chest.EnsureSolution();
+
                 builder.SetNoDispose();
-
                 builder.AddBackground(25, 0, 500, 410, 0x53);
-
                 builder.AddImage(62, 20, 0x67);
-
-                builder.AddHtmlLocalized(80, 36, 110, 70, 1018309, true); // A Puzzle Lock
-
-                /* Correctly choose the sequence of cylinders needed to open the latch.  Each cylinder
-                 * may potentially be used more than once.  Beware!  A false attempt could be deadly!
-                 */
-                builder.AddHtmlLocalized(214, 26, 270, 90, 1018310, true, true);
+                builder.AddLabel(80, 36, 0x481, "Puzzle Lock");
+                builder.AddLabel(214, 26, 0x481, "Elige los cilindros para abrir el cierre.");
+                builder.AddLabel(214, 46, 0x481, "Un mismo cilindro puede repetirse.");
+                builder.AddLabel(214, 66, 0x481, "Cuidado: un fallo puede ser mortal.");
 
                 AddLeftCylinderButton(ref builder, 62, 130, PuzzleChestCylinder.LightBlue, 10);
                 AddLeftCylinderButton(ref builder, 62, 180, PuzzleChestCylinder.Blue, 11);
@@ -623,44 +872,42 @@ namespace Server.Items
 
                 if (_lockpicking >= 60.0)
                 {
-                    builder.AddHtmlLocalized(160, 125, 230, 24, 1018308); // Lockpicking hint:
-
+                    builder.AddLabel(160, 125, 0x481, "Pista de Lockpicking:");
                     builder.AddBackground(159, 150, 230, 95, 0x13EC);
 
                     if (_lockpicking >= 80.0)
                     {
-                        builder.AddHtmlLocalized(165, 157, 200, 40, 1018312); // In the first slot:
-                        AddCylinder(ref builder, 350, 165, _chest.Solution.First);
+                        builder.AddLabel(165, 157, 0x481, "En el 1er hueco:");
+                        AddCylinder(ref builder, 330, 154, _chest.Solution.First);
 
-                        builder.AddHtmlLocalized(165, 197, 200, 40, 1018313); // Used in unknown slot:
-                        AddCylinder(ref builder, 350, 200, _chest.FirstHint);
+                        builder.AddLabel(165, 185, 0x481, "En hueco desconocido:");
+                        AddCylinder(ref builder, 330, 182, _chest.FirstHint);
 
                         if (_lockpicking >= 90.0)
                         {
-                            AddCylinder(ref builder, 350, 212, _chest.SecondHint);
+                            AddCylinder(ref builder, 352, 182, _chest.SecondHint);
                         }
 
                         if (_lockpicking >= 100.0)
                         {
-                            AddCylinder(ref builder, 350, 224, _chest.ThirdHint);
+                            AddCylinder(ref builder, 330, 206, _chest.ThirdHint);
                         }
                     }
                     else
                     {
-                        builder.AddHtmlLocalized(165, 157, 200, 40, 1018313); // Used in unknown slot:
-                        AddCylinder(ref builder, 350, 160, _chest.FirstHint);
+                        builder.AddLabel(165, 157, 0x481, "En hueco desconocido:");
+                        AddCylinder(ref builder, 330, 160, _chest.FirstHint);
 
                         if (_lockpicking >= 70.0)
                         {
-                            AddCylinder(ref builder, 350, 172, _chest.SecondHint);
+                            AddCylinder(ref builder, 352, 160, _chest.SecondHint);
                         }
                     }
                 }
 
                 if (_lastGuess != null)
                 {
-                    builder.AddHtmlLocalized(127, 249, 170, 20, 1018311); // Thy previous guess:
-
+                    builder.AddLabel(127, 249, 0x481, "Intento anterior:");
                     builder.AddBackground(290, 247, 115, 25, 0x13EC);
 
                     AddCylinder(ref builder, 281, 254, _lastGuess.First);
@@ -706,7 +953,7 @@ namespace Server.Items
                 builder.AddItem(x + 23, y + 12, 0xB13);
                 builder.AddItem(x, y + 23, 0xB11);
 
-                if (cylinder != PuzzleChestCylinder.None)
+                if (cylinder != PuzzleChestCylinder.None && cylinder != 0)
                 {
                     builder.AddItem(x, y + 2, 0x51A);
                     AddCylinder(ref builder, x - 1, y + 19, cylinder);
@@ -721,21 +968,21 @@ namespace Server.Items
 
             private static void AddCylinder(ref DynamicGumpBuilder builder, int x, int y, PuzzleChestCylinder cylinder)
             {
-                if (cylinder != PuzzleChestCylinder.None)
+                if (cylinder != PuzzleChestCylinder.None && cylinder != 0)
                 {
                     builder.AddItem(x, y, (int)cylinder);
-                }
-                else
-                {
-                    builder.AddItem(x + 9, y, (int)cylinder);
                 }
             }
 
             public override void OnResponse(NetState sender, in RelayInfo info)
             {
-                var from = sender.Mobile;
+                var from = sender?.Mobile;
+                if (from == null || from.Deleted || _chest == null || _chest.Deleted || info.ButtonID == 0)
+                {
+                    return;
+                }
 
-                if (_chest.Deleted || info.ButtonID == 0 || !from.CheckAlive())
+                if (!from.CheckAlive())
                 {
                     return;
                 }
@@ -743,7 +990,7 @@ namespace Server.Items
                 if (from.AccessLevel == AccessLevel.Player &&
                     (from.Map != _chest.Map || !from.InRange(_chest.GetWorldLocation(), 2)))
                 {
-                    from.LocalOverheadMessage(MessageType.Regular, 0x3B2, 500446); // That is too far away.
+                    from.LocalOverheadMessage(MessageType.Regular, 0x3B2, 500446);
                     return;
                 }
 
@@ -753,7 +1000,7 @@ namespace Server.Items
                     return;
                 }
 
-                if (info.Switches.Length == 0)
+                if (info.Switches.IsEmpty)
                 {
                     return;
                 }
@@ -774,7 +1021,7 @@ namespace Server.Items
                     15 => PuzzleChestCylinder.Red,
                     16 => PuzzleChestCylinder.DarkBlue,
                     17 => PuzzleChestCylinder.Yellow,
-                    _  => PuzzleChestCylinder.None
+                    _ => PuzzleChestCylinder.None
                 };
 
                 if (cylinder == PuzzleChestCylinder.None)
@@ -783,9 +1030,7 @@ namespace Server.Items
                 }
 
                 _solution.Cylinders[pedestal] = cylinder;
-
-                _check = pedestal;
-                from.SendGump(this);
+                from.SendGump(new PuzzleGump(from, _chest, _solution, pedestal));
             }
         }
 
@@ -807,15 +1052,14 @@ namespace Server.Items
                 builder.AddBackground(15, 250, 305, 163, 0x53);
                 builder.AddBackground(28, 265, 280, 133, 0xBB8);
 
-                builder.AddHtmlLocalized(35, 271, 270, 24, 1018314); // Thou hast failed to solve the puzzle!
-
-                builder.AddHtmlLocalized(35, 297, 250, 24, 1018315); // Correctly placed colors:
+                builder.AddLabel(35, 271, 0x481, "No has resuelto el puzle.");
+                builder.AddLabel(35, 297, 0x481, "Colores bien colocados:");
                 builder.AddLabelPlaceholder(285, 297, 0x44, "cylinders");
 
-                builder.AddHtmlLocalized(35, 323, 250, 24, 1018316); // Used colors in wrong slots:
+                builder.AddLabel(35, 323, 0x481, "Colores en otro hueco:");
                 builder.AddLabelPlaceholder(285, 323, 0x44, "colors");
 
-                builder.AddButton(152, 369, 0xFA5, 0xFA7, 0); // Close
+                builder.AddButton(152, 369, 0xFA5, 0xFA7, 0);
             }
 
             protected override void BuildStrings(ref GumpStringsBuilder builder)

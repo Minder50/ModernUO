@@ -200,7 +200,7 @@ namespace Server.Commands
             var lv = TryCreateItem(5403, 1359, 0, new RaiseSwitch());
 
             var stone =
-                TryCreateItem(5403, 1360, 0, new RaisableItem(0x788, 10, 0x477, 0x475, TimeSpan.FromMinutes(1.5)));
+                TryCreateItem(5403, 1360, 5, new RaisableItem(0x788, 10, 0x477, 0x475, TimeSpan.FromMinutes(1.5)));
             var door =
                 TryCreateItem(5524, 1367, 0, new RaisableItem(0x1D0, 20, 0x477, 0x475, TimeSpan.FromMinutes(5.0)));
 
