@@ -65,9 +65,9 @@ namespace Server.Items
             Movable = false;
             Name = "Altar de Calaveras de Campeón";
 
-            _destLocation = new Point3D(7078, 727, 0);
+            _destLocation = new Point3D(7078, 727, 25);
             _destMap = Map.Felucca;
-            _harrowerSpawnLocation = new Point3D(6995, 733, 0);
+            _harrowerSpawnLocation = new Point3D(6995, 733, 51);
             _requiredSkulls = 1;
             _gateDuration = TimeSpan.FromMinutes(5.0);
         }
@@ -198,13 +198,13 @@ namespace Server.Items
                 var harrower = new Harrower();
                 harrower.MoveToWorld(spawnPos, map);
                 summoner?.SendMessage(
-                    $"¡Se ha abierto el portal hacia ({_destLocation.X}, {_destLocation.Y}) y Harrower ha sido invocado!"
+                    $"¡Se ha abierto el portal hacia la Mazmorra y Harrower ha sido invocado!"
                 );
             }
             else
             {
                 summoner?.SendMessage(
-                    $"¡Se ha abierto el portal hacia ({_destLocation.X}, {_destLocation.Y})! Harrower ya está presente."
+                    $"¡Se ha abierto el portal hacia la Mazmorra! Harrower ya está presente."
                 );
             }
         }

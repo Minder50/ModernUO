@@ -549,7 +549,7 @@ namespace Server.Items
                     FifthChestGateDest,
                     Map.Felucca,
                     0x482,
-                    "¡5.º cofre resuelto! Se ha abierto un portal a tus pies hacia (5451, 1374)."
+                    "¡5.º cofre resuelto! Se ha abierto un portal a tus pies hacia la sala del trono."
                 );
             }
             else if (_solvedChestCount >= HarrowerAndGateAtSixChests)
@@ -579,7 +579,7 @@ namespace Server.Items
                 );
 
                 solver.SendMessage(
-                    "¡6.º cofre resuelto! Se ha generado el altar en tu posición (dura 5 minutos) hacia la Mazmorra y Harrower ha sido invocado en la Mazmorra."
+                    "¡6.º cofre resuelto! Se ha generado el altar en tu posición (dura 5 minutos) hacia la Mazmorra y Harrower ha sido invocado en la Mazmorra. Haz doble clic en el altar para activarlo."
                 );
             }
             else
