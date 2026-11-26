@@ -1,0 +1,356 @@
+[
+  {
+    "$type": "Spawner",
+    "guid": "b5f59e40-d4f2-4909-9351-890a91f161d7",
+    "name": "IM_Spawner_Entrada",
+    "location": [4194, 3263, 5],
+    "map": "Trammel",
+    "count": 1,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "dragon", "probability": 100, "maxCount": 1, "properties": "Karma=-15000", "parameters": "" }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "e30fee1a-9c32-47b6-9097-76e8b797e14a",
+    "name": "IM_Spawner_1",
+    "location": [1128, 1188, -12],
+    "map": "TerMur",
+    "count": 2,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "lich", "probability": 100, "maxCount": 2, "properties": "Karma=-15000", "parameters": "" }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "a0caafbf-eca1-435d-ba17-e6813a0437c4",
+    "name": "IM_Spawner_DragonEsqueleto_1",
+    "location": [1133, 1149, -42],
+    "map": "TerMur",
+    "count": 2,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "skeletaldragon", "probability": 100, "maxCount": 1 },
+      { "name": "treasurechestlevel3", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "76d7e13f-09bc-4c19-ae8e-9f6f887b2e22",
+    "name": "IM_Spawner_Efreet",
+    "location": [1187, 1137, -42],
+    "map": "TerMur",
+    "count": 4,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "efreet", "probability": 100, "maxCount": 1 },
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 2 },
+      { "name": "twaulo", "probability": 100, "maxCount": 1 }
+    ],
+    "group": true
+  },
+  {
+    "$type": "Spawner",
+    "guid": "d2484c9b-f21c-4d00-bc0d-91212242c1c0",
+    "name": "IM_Spawner_8",
+    "location": [1015, 1000, -43],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "lich", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "76c80ae7-7d89-4a9d-8763-237f9e281890",
+    "name": "IM_Spawner_Navery_Entrada",
+    "location": [1081, 987, -20],
+    "map": "TerMur",
+    "count": 4,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "wyvern", "probability": 100, "maxCount": 3 },
+      { "name": "treasurechestlevel3", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "5e863be3-11c5-439b-bc38-9f4c4ecd617c",
+    "name": "IM_Spawner_3",
+    "location": [1051, 1160, -42],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "lichlord", "probability": 100, "maxCount": 2, "properties": "Karma=-15000", "parameters": "" },
+      { "name": "treasurechestlevel3", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "5519634d-80f2-4b1d-a316-43b276d1f600",
+    "name": "IM_Spawner_DragonEsqueleto_Sala_1",
+    "location": [1208, 970, -27],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "skeletaldragon", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "4c7405b8-db73-4da8-b5d2-5b2a2ba098e7",
+    "name": "IM_Spawner_4",
+    "location": [1107, 1131, -52],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "ancientlich", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel3", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "300ccd1b-0532-4655-9adc-8b4f5ec86d8b",
+    "name": "IM_Spawner_2",
+    "location": [1097, 1169, 1],
+    "map": "TerMur",
+    "count": 4,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "lich", "probability": 100, "maxCount": 3, "properties": "Karma=-15000", "parameters": "" },
+      { "name": "treasurechestlevel3", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "aabb5473-f40e-4e0e-8ffd-3ca28649033c",
+    "name": "IM_Spawner_Salatrono_1",
+    "location": [1029, 985, -42],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "fiercedragon", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "c1e4679f-c608-4b36-940a-ce2100ca0fc0",
+    "name": "IM_Spawner_Trono",
+    "location": [1013, 976, -27],
+    "map": "TerMur",
+    "count": 4,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "greaterdragon", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 2 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "9510f528-c244-4d0c-aaaa-2d4734efcb50",
+    "name": "IM_Spawner_Salatrono_3",
+    "location": [1059, 976, -42],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": 4,
+    "entries": [
+      { "name": "fiercedragon", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "bd5f1a48-0409-446a-9ec3-c62ea40a20c6",
+    "name": "IM_Spawner_Abyss",
+    "location": [594, 902, -73],
+    "map": "TerMur",
+    "count": 8,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 25,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "serado", "probability": 100, "maxCount": 1, "properties": "", "parameters": "" },
+      { "name": "balron", "probability": 100, "maxCount": 5 },
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 2 }
+    ],
+    "group": true
+  },
+  {
+    "$type": "Spawner",
+    "guid": "0879b26f-4a2c-40da-bc17-31b404898a9e",
+    "name": "IM_Spawner_Salatrono_2",
+    "location": [1044, 976, -30],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": 4,
+    "entries": [
+      { "name": "fiercedragon", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "1e32a2de-6bfd-4e63-90f7-6f6697804aef",
+    "name": "IM_Spawner_Abyss_Entrada",
+    "location": [1144, 1086, -40],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "ancientlich", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel3", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "cd6414ca-4e1e-4781-8054-ba1a4ccabc99",
+    "name": "IM_Spawner_7",
+    "location": [1216, 1079, -52],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "lichlord", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel3", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "d694ca5d-f972-4881-85dd-ec9623343bcd",
+    "name": "IM_Spawner_6",
+    "location": [1147, 991, -39],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "lich", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel3", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "753e99e0-8c9c-4b7e-bdf3-8e8503457435",
+    "name": "IM_Spawner_5",
+    "location": [1064, 1142, -37],
+    "map": "TerMur",
+    "count": 2,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "ancientlich", "probability": 100, "maxCount": 2 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "4acb17de-33a1-436f-a349-70d3fa5509e8",
+    "name": "IM_Spawner_SalaTesoro",
+    "location": [1068, 1026, -37],
+    "map": "TerMur",
+    "count": 4,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 4 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "4eab9feb-6bb1-4ef0-aaf8-d5c6ba6b06d5",
+    "name": "IM_Spawner_DragonEsqueleto_Sala_2",
+    "location": [1231, 984, -27],
+    "map": "TerMur",
+    "count": 3,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 4,
+    "walkingRange": 4,
+    "entries": [
+      { "name": "skeletaldragon", "probability": 100, "maxCount": 2 },
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 1 }
+    ]
+  },
+  {
+    "$type": "Spawner",
+    "guid": "369335ce-144a-47b0-abc4-7637976e0644",
+    "name": "IM_Spawner_NaveryLair",
+    "location": [1051, 862, -32],
+    "map": "TerMur",
+    "count": 8,
+    "minDelay": "00:05:00",
+    "maxDelay": "00:10:00",
+    "homeRange": 25,
+    "walkingRange": -1,
+    "entries": [
+      { "name": "harrowertentacles", "probability": 100, "maxCount": 1, "properties": "", "parameters": "" },
+      { "name": "treasurechestlevel4", "probability": 100, "maxCount": 2 },
+      { "name": "dragon", "probability": 100, "maxCount": 5 }
+    ],
+    "group": true
+  }
+]
