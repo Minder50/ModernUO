@@ -1,6 +1,9 @@
-using System;
 using ModernUO.Serialization;
 using Server.Accounting;
+using Server.Mobiles;
+using Server.Regions;
+using Server.Multis;
+using System;
 
 namespace Server.Items;
 
@@ -41,6 +44,39 @@ public partial class Gold : Item
     public override void OnAdded(IEntity parent)
     {
         base.OnAdded(parent);
+
+        if (parent is Container cont &&
+            cont.RootParent is PlayerMobile player &&
+            cont is not BankBox)
+        {
+            var inTown = player.Region.IsPartOf<GuardedRegion>();
+            var inHouse = BaseHouse.FindHouseAt(player) != null;
+
+            if (inTown || inHouse)
+            {
+                var backpack = player.Backpack;
+
+                if (backpack != null)
+                {
+                    var totalGold = backpack.GetAmount(typeof(Gold));
+
+                    if (totalGold > 30000)
+                    {
+                        var movido = Amount;
+
+                        player.Account?.DepositGold(movido);
+
+                        player.SendMessage(
+                            54,
+                            $"Las {movido:N0} monedas recogidas se han ingresado automáticamente en el banco."
+                        );
+
+                        Delete();
+                        return;
+                    }
+                }
+            }
+        }
 
         if (!AccountGold.Enabled)
         {

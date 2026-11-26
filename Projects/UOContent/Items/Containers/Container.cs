@@ -3,6 +3,7 @@ using Server.Collections;
 using Server.ContextMenus;
 using Server.Mobiles;
 using Server.Multis;
+using Server.Regions;
 using Server.Systems.FeatureFlags;
 
 namespace Server.Items;
@@ -33,6 +34,16 @@ public abstract class BaseContainer : Container
     }
 
     public override bool IsAccessibleTo(Mobile m) => BaseHouse.CheckAccessible(m, this) && base.IsAccessibleTo(m);
+
+    protected override bool CanBypassMaxWeight(Mobile mobile, Item item)
+    {
+        if (item is not Gold || mobile is not PlayerMobile player)
+        {
+            return false;
+        }
+
+        return player.Region.IsPartOf<GuardedRegion>() || BaseHouse.FindHouseAt(player) != null;
+    }
 
     public override bool CheckHold(Mobile m, Item item, bool message, bool checkItems, int plusItems, int plusWeight)
     {

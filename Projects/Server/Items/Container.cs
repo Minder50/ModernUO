@@ -227,6 +227,8 @@ public partial class Container : Item
     public bool CheckHold(Mobile m, Item item, bool message, bool checkItems) =>
         CheckHold(m, item, message, checkItems, 0, 0);
 
+    protected virtual bool CanBypassMaxWeight(Mobile mobile, Item item) => false;
+
     public virtual bool CheckHold(Mobile m, Item item, bool message, bool checkItems, int plusItems, int plusWeight)
     {
         if (m == null || m.AccessLevel < AccessLevel.GameMaster)
@@ -254,7 +256,9 @@ public partial class Container : Item
                 return false;
             }
 
-            if (MaxWeight != 0 && TotalWeight + plusWeight + item.TotalWeight + item.PileWeight > MaxWeight)
+            if (MaxWeight != 0 &&
+                TotalWeight + plusWeight + item.TotalWeight + item.PileWeight > MaxWeight &&
+                !CanBypassMaxWeight(m, item))
             {
                 if (message)
                 {
