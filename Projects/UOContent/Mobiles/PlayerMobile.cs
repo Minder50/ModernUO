@@ -147,6 +147,11 @@ namespace Server.Mobiles
         };
 
         private HashSet<int> _acquiredRecipes;
+        private List<BaseHouse> _otrasPropiedades = new();
+        private BaseHouse _priPropiedad;
+        private int _numCasas;
+        private int _maxCasas = 1;
+        private bool _privilegiado;
 
         private HashSet<Mobile> _allFollowers;
         private int m_BeardModID = -1, m_BeardModHue;
@@ -224,6 +229,148 @@ namespace Server.Mobiles
 
         [CommandProperty(AccessLevel.GameMaster)]
         public DateTime PeacedUntil { get; set; }
+
+        [CommandProperty(AccessLevel.Administrator, readOnly: true)]
+        public BaseHouse PriPropiedad => _priPropiedad;
+
+        [CommandProperty(AccessLevel.Administrator, readOnly: true)]
+        public int NumCasas => _numCasas;
+
+        [CommandProperty(AccessLevel.Administrator)]
+        public int MaxCasas
+        {
+            get => _maxCasas;
+            set
+            {
+                if (_privilegiado)
+                {
+                    _maxCasas = Math.Max(NumCasas, Math.Max(1, value));
+                }
+            }
+        }
+
+        [CommandProperty(AccessLevel.Administrator)]
+        public bool Privilegiado
+        {
+            get => _privilegiado;
+            set
+            {
+                if (_privilegiado == value)
+                {
+                    return;
+                }
+
+                _privilegiado = value;
+
+                if (!value)
+                {
+                    _maxCasas = 1;
+
+                    while (_otrasPropiedades.Count > 0)
+                    {
+                        var house = _otrasPropiedades[^1];
+
+                        if (house == null || house.Deleted)
+                        {
+                            _otrasPropiedades.RemoveAt(_otrasPropiedades.Count - 1);
+                        }
+                        else if (house.Owner == this)
+                        {
+                            house.Delete();
+                        }
+                        else if (house.CoOwners?.Contains(this) == true)
+                        {
+                            house.RemoveCoOwnerForHouseLimit(this);
+                        }
+                        else
+                        {
+                            RemoveHouse(house);
+                        }
+
+                        if (_otrasPropiedades.Contains(house))
+                        {
+                            RemoveHouse(house);
+                        }
+                    }
+
+                    UpdateHouseCount();
+                }
+            }
+        }
+
+        public bool CanAddHouse(BaseHouse house = null) => NumCasas < MaxCasas ||
+            house != null && (_priPropiedad == house || _otrasPropiedades.Contains(house));
+
+        public void AddOwnedHouse(BaseHouse house)
+        {
+            if (house == null || house.Deleted || _priPropiedad == house)
+            {
+                return;
+            }
+
+            var existingIndex = _otrasPropiedades.IndexOf(house);
+
+            if (_priPropiedad == null)
+            {
+                _priPropiedad = house;
+
+                if (existingIndex >= 0)
+                {
+                    _otrasPropiedades.RemoveAt(existingIndex);
+                }
+            }
+            else if (existingIndex < 0)
+            {
+                _otrasPropiedades.Add(house);
+            }
+
+            UpdateHouseCount();
+        }
+
+        public void AddCoOwnedHouse(BaseHouse house)
+        {
+            if (house == null || house.Deleted || _priPropiedad == house || _otrasPropiedades.Contains(house))
+            {
+                return;
+            }
+
+            _otrasPropiedades.Add(house);
+            UpdateHouseCount();
+        }
+
+        public void RemoveHouse(BaseHouse house)
+        {
+            if (house == null)
+            {
+                return;
+            }
+
+            if (_priPropiedad == house)
+            {
+                _priPropiedad = null;
+
+                for (var i = 0; i < _otrasPropiedades.Count; i++)
+                {
+                    var next = _otrasPropiedades[i];
+
+                    if (next?.Deleted == false && next.Owner == this)
+                    {
+                        _priPropiedad = next;
+                        _otrasPropiedades.RemoveAt(i);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                _otrasPropiedades.Remove(house);
+            }
+
+            UpdateHouseCount();
+        }
+
+        private void UpdateHouseCount() => _numCasas =
+            (_priPropiedad?.Deleted == false ? 1 : 0) + _otrasPropiedades.Count;
 
         public DesignContext DesignContext { get; set; }
 
@@ -2798,6 +2945,7 @@ namespace Server.Mobiles
 
             switch (version)
             {
+                case 35:
                 case 34: // Acquired Recipes is now a Set
                 case 33: // Removes champion title
                 case 32: // Removes virtue properties
@@ -3102,6 +3250,15 @@ namespace Server.Mobiles
                     }
             }
 
+            if (version >= 35)
+            {
+                _priPropiedad = reader.ReadEntity<BaseHouse>();
+                _otrasPropiedades = reader.ReadEntityList<BaseHouse>() ?? new List<BaseHouse>();
+                _numCasas = reader.ReadInt();
+                _maxCasas = Math.Max(1, reader.ReadInt());
+                _privilegiado = reader.ReadBool();
+            }
+
             if (!ProfessionInfo.VerifyProfession(Profession))
             {
                 Profession = 0;
@@ -3145,7 +3302,7 @@ namespace Server.Mobiles
         {
             base.Serialize(writer);
 
-            writer.Write(34); // version
+            writer.Write(35); // version
 
             if (Stabled == null)
             {
@@ -3261,6 +3418,13 @@ namespace Server.Mobiles
             writer.Write((int)Flags);
 
             writer.Write(GameTime);
+
+            writer.Write(_priPropiedad);
+            _otrasPropiedades.Tidy();
+            writer.Write(_otrasPropiedades);
+            writer.Write(NumCasas);
+            writer.Write(MaxCasas);
+            writer.Write(Privilegiado);
         }
 
         public override bool CanSee(Mobile m)

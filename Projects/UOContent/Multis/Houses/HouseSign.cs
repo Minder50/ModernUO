@@ -142,7 +142,7 @@ public partial class HouseSign : Item
         {
             var canClaim = Owner.CoOwners?.Count > 0 && Owner.IsCoOwner(from) || Owner.IsFriend(from);
 
-            if (canClaim && !BaseHouse.HasAccountHouse(from))
+            if (canClaim && !BaseHouse.HasReachedHouseLimit(from, Owner))
             {
                 Owner.Owner = from;
                 Owner.LastTraded = Core.Now;
@@ -164,7 +164,7 @@ public partial class HouseSign : Item
         {
             var canClaim = Owner.IsCoOwner(m) || Owner.IsFriend(m);
 
-            if (canClaim && !BaseHouse.HasAccountHouse(m))
+            if (canClaim && !BaseHouse.HasReachedHouseLimit(m, Owner))
             {
                 m.SendGump(
                     new ClaimHouseWarningGump(okay => ClaimGump_Callback(m, okay))

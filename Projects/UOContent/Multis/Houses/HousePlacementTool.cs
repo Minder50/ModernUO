@@ -192,7 +192,7 @@ public class HousePlacementListGump : DynamicGump
         {
             _from.SendGump(new HousePlacementCategoryGump());
         }
-        else if (_from.AccessLevel < AccessLevel.GameMaster && BaseHouse.HasAccountHouse(_from))
+        else if (_from.AccessLevel < AccessLevel.GameMaster && BaseHouse.HasReachedHouseLimit(_from))
         {
             _from.SendLocalizedMessage(501271); // You already own a house, you may not place another!
         }
@@ -1986,7 +1986,7 @@ public class HousePlacementEntry
         {
             case HousePlacementResult.Valid:
                 {
-                    if (from.AccessLevel < AccessLevel.GameMaster && BaseHouse.HasAccountHouse(from))
+                    if (from.AccessLevel < AccessLevel.GameMaster && BaseHouse.HasReachedHouseLimit(from))
                     {
                         from.SendLocalizedMessage(501271); // You already own a house, you may not place another!
                     }
@@ -2089,7 +2089,7 @@ public class HousePlacementEntry
         {
             case HousePlacementResult.Valid:
                 {
-                    if (from.AccessLevel < AccessLevel.GameMaster && BaseHouse.HasAccountHouse(from))
+                    if (from.AccessLevel < AccessLevel.GameMaster && BaseHouse.HasReachedHouseLimit(from))
                     {
                         from.SendLocalizedMessage(501271); // You already own a house, you may not place another!
                     }

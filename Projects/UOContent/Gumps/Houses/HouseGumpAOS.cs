@@ -858,6 +858,15 @@ namespace Server.Gumps
 
                     newHouse.Friends = new List<Mobile>(house.Friends);
                     newHouse.CoOwners = new List<Mobile>(house.CoOwners);
+
+                    for (var i = 0; i < newHouse.CoOwners.Count; i++)
+                    {
+                        if (newHouse.CoOwners[i] is PlayerMobile player)
+                        {
+                            player.AddCoOwnedHouse(newHouse);
+                        }
+                    }
+
                     newHouse.Bans = new List<Mobile>(house.Bans);
                     newHouse.Access = new List<Mobile>(house.Access);
                     newHouse.BuiltOn = house.BuiltOn;

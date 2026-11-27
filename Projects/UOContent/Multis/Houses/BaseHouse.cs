@@ -83,6 +83,11 @@ namespace Server.Multis
                 list.Add(this);
             }
 
+            if (owner is PlayerMobile player)
+            {
+                player.AddOwnedHouse(this);
+            }
+
             Movable = false;
         }
 
@@ -356,6 +361,11 @@ namespace Server.Multis
                         m_Table.Remove(m_Owner);
                     }
 
+                    if (m_Owner is PlayerMobile player)
+                    {
+                        player.RemoveHouse(this);
+                    }
+
                     m_Owner.Delta(MobileDelta.Noto);
                 }
 
@@ -369,6 +379,12 @@ namespace Server.Multis
                     }
 
                     list.Add(this);
+
+                    if (m_Owner is PlayerMobile player)
+                    {
+                        player.AddOwnedHouse(this);
+                    }
+
                     m_Owner.Delta(MobileDelta.Noto);
                 }
 
@@ -2284,7 +2300,7 @@ namespace Server.Multis
             {
                 from.SendLocalizedMessage(1005330); // You cannot transfer a house to yourself, silly.
             }
-            else if (HasAccountHouse(to))
+            else if (HasReachedHouseLimit(to, this))
             {
                 from.SendLocalizedMessage(501388); // You cannot transfer ownership to another house owner or co-owner!
             }
@@ -2357,7 +2373,7 @@ namespace Server.Multis
             {
                 transferor.SendLocalizedMessage(1005330); // You cannot transfer a house to yourself, silly.
             }
-            else if (HasAccountHouse(transferee))
+            else if (HasReachedHouseLimit(transferee, this))
             {
                 transferor.SendLocalizedMessage(501388); // You cannot transfer ownership to another house owner or co-owner!
             }
@@ -2796,7 +2812,7 @@ namespace Server.Multis
             {
                 from.SendLocalizedMessage(501362); // That can't be a co-owner of the house.
             }
-            else if (!Core.AOS && HasAccountHouse(targ))
+            else if ((targ is PlayerMobile || !Core.AOS) && HasReachedHouseLimit(targ, this))
             {
                 from.SendLocalizedMessage(501364); // That person is already a house owner.
             }
@@ -2816,6 +2832,11 @@ namespace Server.Multis
             {
                 CoOwners.Add(targ);
 
+                if (targ is PlayerMobile player)
+                {
+                    player.AddCoOwnedHouse(this);
+                }
+
                 targ.Delta(MobileDelta.Noto);
                 targ.SendLocalizedMessage(501343); // You have been made a co-owner of this house.
             }
@@ -2828,28 +2849,43 @@ namespace Server.Multis
                 return;
             }
 
-            if (CoOwners.Remove(targ))
+            if (RemoveCoOwnerInternal(targ))
             {
-                targ.Delta(MobileDelta.Noto);
-
                 from.SendLocalizedMessage(501299); // Co-owner removed from list.
                 targ.SendLocalizedMessage(501300); // You have been removed as a house co-owner.
-
-                foreach (var info in Secures)
-                {
-                    var c = info.Item;
-
-                    if (c is StrongBox box && box.Owner == targ)
-                    {
-                        box.IsLockedDown = false;
-                        box.IsSecure = false;
-                        Secures.Remove(info);
-                        box.Destroy();
-                        break;
-                    }
-                }
             }
         }
+
+        private bool RemoveCoOwnerInternal(Mobile targ)
+        {
+            if (!CoOwners.Remove(targ))
+            {
+                return false;
+            }
+
+            if (targ is PlayerMobile player)
+            {
+                player.RemoveHouse(this);
+            }
+
+            targ.Delta(MobileDelta.Noto);
+
+            foreach (var info in Secures)
+            {
+                if (info.Item is StrongBox box && box.Owner == targ)
+                {
+                    box.IsLockedDown = false;
+                    box.IsSecure = false;
+                    Secures.Remove(info);
+                    box.Destroy();
+                    break;
+                }
+            }
+
+            return true;
+        }
+
+        internal void RemoveCoOwnerForHouseLimit(Mobile targ) => RemoveCoOwnerInternal(targ);
 
         public void AddFriend(Mobile from, Mobile targ)
         {
@@ -3217,6 +3253,19 @@ namespace Server.Multis
                             list.Add(this);
                         }
 
+                        if (m_Owner is PlayerMobile playerOwner)
+                        {
+                            playerOwner.AddOwnedHouse(this);
+                        }
+
+                        for (var i = 0; i < CoOwners.Count; i++)
+                        {
+                            if (CoOwners[i] is PlayerMobile playerCoOwner)
+                            {
+                                playerCoOwner.AddCoOwnedHouse(this);
+                            }
+                        }
+
                         break;
                     }
             }
@@ -3371,6 +3420,19 @@ namespace Server.Multis
         public override void OnAfterDelete()
         {
             base.OnAfterDelete();
+
+            if (m_Owner is PlayerMobile owner)
+            {
+                owner.RemoveHouse(this);
+            }
+
+            for (var i = 0; i < CoOwners?.Count; i++)
+            {
+                if (CoOwners[i] is PlayerMobile player)
+                {
+                    player.RemoveHouse(this);
+                }
+            }
 
             if (m_Owner != null && m_Table.TryGetValue(m_Owner, out var list) && list.Remove(this) && list.Count == 0)
             {
@@ -3555,6 +3617,9 @@ namespace Server.Multis
 
             return false;
         }
+
+        public static bool HasReachedHouseLimit(Mobile m, BaseHouse house = null) =>
+            m is PlayerMobile player ? !player.CanAddHouse(house) : HasAccountHouse(m);
 
         public bool IsOwner(Mobile m) =>
             m != null && (m == m_Owner || m.AccessLevel >= AccessLevel.GameMaster ||
@@ -3796,7 +3861,7 @@ namespace Server.Multis
                     return false;
                 }
 
-                if (HasAccountHouse(to))
+                if (HasReachedHouseLimit(to, _house))
                 {
                     from.SendLocalizedMessage(501388); // You cannot transfer ownership to another house owner or co-owner!
                     return false;
@@ -3834,9 +3899,18 @@ namespace Server.Multis
 
                 _house.RemoveKeys(from);
                 _house.Owner = to;
+
+                for (var i = _house.CoOwners.Count - 1; i >= 0; i--)
+                {
+                    if (_house.CoOwners[i] != to)
+                    {
+                        _house.RemoveCoOwnerInternal(_house.CoOwners[i]);
+                    }
+                }
+
+                _house.CoOwners.Clear();
                 _house.Bans.Clear();
                 _house.Friends.Clear();
-                _house.CoOwners.Clear();
                 _house.ChangeLocks(to);
                 _house.LastTraded = Core.Now;
             }
