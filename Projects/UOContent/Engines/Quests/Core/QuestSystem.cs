@@ -7,6 +7,7 @@ using Server.Engines.Quests.Collector;
 using Server.Engines.Quests.Doom;
 using Server.Engines.Quests.Hag;
 using Server.Engines.Quests.Haven;
+using Server.Engines.Quests.MagicTreasure;
 using Server.Engines.Quests.Matriarch;
 using Server.Engines.Quests.Naturalist;
 using Server.Engines.Quests.Necro;
@@ -36,7 +37,8 @@ namespace Server.Engines.Quests
             typeof(AmbitiousQueenQuest),
             typeof(EminosUndertakingQuest),
             typeof(HaochisTrialsQuest),
-            typeof(TerribleHatchlingsQuest)
+            typeof(TerribleHatchlingsQuest),
+            typeof(EnBuscaDelTesoroDeLaMagiaQuest)
         };
 
         private TimerExecutionToken _timerToken;
