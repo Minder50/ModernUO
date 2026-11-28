@@ -3,6 +3,7 @@ using System.Reflection;
 using Server.Commands;
 using Server.Commands.Generic;
 using Server.Gumps;
+using Server.Mobiles;
 using Server.Targeting;
 using Server.Text;
 using static Server.Attributes;
@@ -452,7 +453,15 @@ namespace Server.Commands
                     );
                 }
 
-                prop.SetValue(obj, toSet, null);
+                if (obj is PlayerMobile player && prop.Name == nameof(PlayerMobile.Privilegiado) && toSet is bool enabled)
+                {
+                    player.SetPrivilegiado(enabled, from);
+                }
+                else
+                {
+                    prop.SetValue(obj, toSet, null);
+                }
+
                 return SetSuccess;
             }
             catch

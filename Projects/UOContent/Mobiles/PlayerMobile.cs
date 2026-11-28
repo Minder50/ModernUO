@@ -23,6 +23,7 @@ using Server.Factions;
 using Server.Guilds;
 using Server.Gumps;
 using Server.Items;
+using Server.Logging;
 using Server.Misc;
 using Server.Movement;
 using Server.Multis;
@@ -99,6 +100,7 @@ namespace Server.Mobiles
 
     public partial class PlayerMobile : Mobile, IHonorTarget, IHasSteps
     {
+        private static readonly ILogger logger = LogFactory.GetLogger(typeof(PlayerMobile));
         private static bool m_NoRecursion;
 
         private static readonly Point3D[] m_TrammelDeathDestinations =
@@ -253,49 +255,62 @@ namespace Server.Mobiles
         public bool Privilegiado
         {
             get => _privilegiado;
-            set
+            set => SetPrivilegiado(value, null);
+        }
+
+        internal void SetPrivilegiado(bool value, Mobile changedBy)
+        {
+            if (_privilegiado == value)
             {
-                if (_privilegiado == value)
+                return;
+            }
+
+            _privilegiado = value;
+
+            if (!value)
+            {
+                _maxCasas = 1;
+
+                while (_otrasPropiedades.Count > 0)
                 {
-                    return;
-                }
+                    var house = _otrasPropiedades[^1];
 
-                _privilegiado = value;
-
-                if (!value)
-                {
-                    _maxCasas = 1;
-
-                    while (_otrasPropiedades.Count > 0)
+                    if (house == null || house.Deleted)
                     {
-                        var house = _otrasPropiedades[^1];
-
-                        if (house == null || house.Deleted)
-                        {
-                            _otrasPropiedades.RemoveAt(_otrasPropiedades.Count - 1);
-                        }
-                        else if (house.Owner == this)
-                        {
-                            house.Delete();
-                        }
-                        else if (house.CoOwners?.Contains(this) == true)
-                        {
-                            house.RemoveCoOwnerForHouseLimit(this);
-                        }
-                        else
-                        {
-                            RemoveHouse(house);
-                        }
-
-                        if (_otrasPropiedades.Contains(house))
-                        {
-                            RemoveHouse(house);
-                        }
+                        _otrasPropiedades.RemoveAt(_otrasPropiedades.Count - 1);
+                    }
+                    else if (house.Owner == this)
+                    {
+                        house.Delete();
+                    }
+                    else if (house.CoOwners?.Contains(this) == true)
+                    {
+                        house.RemoveCoOwnerForHouseLimit(this);
+                    }
+                    else
+                    {
+                        RemoveHouse(house);
                     }
 
-                    UpdateHouseCount();
+                    if (_otrasPropiedades.Contains(house))
+                    {
+                        RemoveHouse(house);
+                    }
                 }
+
+                UpdateHouseCount();
             }
+
+            logger.Information(
+                "Housing privilege for player {Player} (account {PlayerAccount}) changed to {Enabled} by {ChangedBy} (account {ChangedByAccount}; houses: {HouseCount}/{HouseLimit}).",
+                Name,
+                Account?.Username ?? "Unknown",
+                value,
+                changedBy?.Name ?? Name,
+                changedBy?.Account?.Username ?? Account?.Username ?? "Unknown",
+                NumCasas,
+                MaxCasas
+            );
         }
 
         public bool CanAddHouse(BaseHouse house = null) => NumCasas < MaxCasas ||
